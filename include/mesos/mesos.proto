@@ -869,6 +869,7 @@ message ContainerInfo {
     enum Network {
       HOST = 1;
       BRIDGE = 2;
+      LXC = 3;
     }
 
     optional Network network = 2 [default = HOST];
@@ -881,6 +882,14 @@ message ContainerInfo {
     }
 
     repeated PortMapping port_mappings = 3;
+
+    message InterfaceMapping {
+      required string host_iface = 1;
+      required string container_iface = 2;
+      optional string hw_address = 3;
+    }
+
+    repeated InterfaceMapping interface_mappings = 4;
   }
 
   required Type type = 1;

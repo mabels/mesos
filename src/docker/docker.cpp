@@ -355,11 +355,33 @@ Future<Nothing> Docker::run(
   switch (dockerInfo.network()) {
     case ContainerInfo::DockerInfo::HOST: network = "host"; break;
     case ContainerInfo::DockerInfo::BRIDGE: network = "bridge"; break;
+    case ContainerInfo::DockerInfo::LXC: network = "none"; break;
     default: return Failure("Unsupported Network mode: " +
                             stringify(dockerInfo.network()));
   }
 
   argv.push_back(network);
+
+  if (dockerInfo.network() == ContainerInfo::DockerInfo::LXC) {
+    argv.push_back("--privileged");
+    argv.push_back("--lxc-conf");
+    argv.push_back("lxc.aa_profile=lxc-container-default-with-nesting");
+    foreach (const ContainerInfo::DockerInfo::InterfaceMapping& mapping,
+                     dockerInfo.interface_mappings()) {
+      argv.push_back("--lxc-conf");
+      argv.push_back("lxc.network.type=veth");
+      if (!mapping.hw_address().empty()) {
+        argv.push_back("--lxc-conf");
+        argv.push_back("lxc.network.hw_address="+mapping.hw_address());
+      }
+      argv.push_back("--lxc-conf");
+      argv.push_back("lxc.network.link="+mapping.host_iface());
+      argv.push_back("--lxc-conf");
+      argv.push_back("lxc.network.name="+mapping.container_iface());
+      argv.push_back("--lxc-conf");
+      argv.push_back("lxc.network.flags=up");
+    }
+  }
 
   if (dockerInfo.port_mappings().size() > 0) {
     if (network != "bridge") {
